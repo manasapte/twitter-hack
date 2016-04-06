@@ -1,4 +1,4 @@
 #!/bin/bash
 virtualenv test
-source test/bin/activate
+. test/bin/activate
 pip install -r requirements.txt
