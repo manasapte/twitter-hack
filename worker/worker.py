@@ -14,12 +14,13 @@ class worker(threading.Thread):
     def run(self):
 	while True:
             count = 0
-            messages = self.queue.receive_messages(MaxNumberOfMessages=10, VisibilityTimeout=1)
+            messages = self.queue.receive_messages(MaxNumberOfMessages=10, VisibilityTimeout=10)
             bodies = [json.loads(message.body) for message in messages]
             #print bodies
-            tags1 = [ {"list": body.get("list", ""), "rankterm": mention} for body in bodies for mention in body.get("user_mentions", [])] 
-            tags2 = [ {"list": body.get("list", ""), "rankterm": hashtag} for body in bodies  for hashtag in body.get("hashtags", [])]
-            [self.r.zincrby(tag["list"], tag["rankterm"]) for tag in tags1 + tags2]	
+            #tags1 = [ {"list": body.get("list", ""), "rankterm": mention, "tid": body.get("tweet_id_str", "") } for body in bodies for mention in body.get("user_mentions", [])] 
+            tags = [ {"list": body.get("list", ""), "rankterm": hashtag, "tid": body.get("tweet_id_str", "") } for body in bodies  for hashtag in body.get("hashtags", [])]
+            [self.r.zincrby(tag["list"], tag["rankterm"]) for tag in tags] #tags1 + tags2]	
+            [self.r.lpush(tag["list"] + "/" + tag["rankterm"], tag["tid"]) for tag in tags] #tags1 + tags2]
             deleteIds = [{'Id': message.message_id, 'ReceiptHandle': message.receipt_handle} for message in messages]
 	    if len(deleteIds) > 0:
                 self.queue.delete_messages(Entries=deleteIds)	
